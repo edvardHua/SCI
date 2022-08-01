@@ -3,7 +3,6 @@ import torch.nn as nn
 from loss import LossFunction
 
 
-
 class EnhanceNetwork(nn.Module):
     def __init__(self, layers, channels):
         super(EnhanceNetwork, self).__init__()
@@ -86,7 +85,6 @@ class CalibrateNetwork(nn.Module):
         return delta
 
 
-
 class Network(nn.Module):
 
     def __init__(self, stage=3):
@@ -122,12 +120,14 @@ class Network(nn.Module):
         return ilist, rlist, inlist, attlist
 
     def _loss(self, input):
+        # i_list 是 enhance 的 raw 输出
+        # en_list 是处理后的 enhance 输出
+        # in_list 是输入的 input
         i_list, en_list, in_list, _ = self(input)
         loss = 0
         for i in range(self.stage):
             loss += self._criterion(in_list[i], i_list[i])
         return loss
-
 
 
 class Finetunemodel(nn.Module):
@@ -137,7 +137,11 @@ class Finetunemodel(nn.Module):
         self.enhance = EnhanceNetwork(layers=1, channels=3)
         self._criterion = LossFunction()
 
-        base_weights = torch.load(weights)
+        if not torch.cuda.is_available():
+            base_weights = torch.load(weights, map_location="cpu")
+        else:
+            base_weights = torch.load(weights)
+
         pretrained_dict = base_weights
         model_dict = self.state_dict()
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
@@ -156,11 +160,12 @@ class Finetunemodel(nn.Module):
         i = self.enhance(input)
         r = input / i
         r = torch.clamp(r, 0, 1)
-        return i, r
-
+        if self.training:
+            return i, r
+        else:
+            return r
 
     def _loss(self, input):
         i, r = self(input)
         loss = self._criterion(input, i)
         return loss
-

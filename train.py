@@ -78,7 +78,6 @@ def main():
     logging.info('gpu device = %s' % args.gpu)
     logging.info("args = %s", args)
 
-
     model = Network(stage=args.stage)
 
     model.enhance.in_conv.apply(model.weights_init)

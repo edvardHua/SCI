@@ -38,24 +38,25 @@ def save_images(tensor, path):
 
 
 def main():
-    if not torch.cuda.is_available():
-        print('no gpu device available')
-        sys.exit(1)
+    # if not torch.cuda.is_available():
+    #     print('no gpu device available')
+    #     sys.exit(1)
 
     model = Finetunemodel(args.model)
-    model = model.cuda()
+    if torch.cuda.is_available():
+        model = model.cuda()
 
     model.eval()
     with torch.no_grad():
         for _, (input, image_name) in enumerate(test_queue):
-            input = Variable(input, volatile=True).cuda()
-            image_name = image_name[0].split('\\')[-1].split('.')[0]
+            input = Variable(input, volatile=True).cuda() if torch.cuda.is_available() else Variable(input, volatile=True)
+            print(input.shape)
+            image_name = os.path.basename(image_name[0])
             i, r = model(input)
             u_name = '%s.png' % (image_name)
             print('processing {}'.format(u_name))
             u_path = save_path + '/' + u_name
             save_images(r, u_path)
-
 
 
 if __name__ == '__main__':
